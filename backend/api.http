@@ -29,3 +29,11 @@ Content-Type: application/json
 
 ### POST - /auth/logout
 POST {{BASE_URL}}/auth/logout
+
+
+### GET - /users/profile
+GET {{BASE_URL}}/users/profile
+
+
+### DELETE - /users/account
+DELETE {{BASE_URL}}/users/account

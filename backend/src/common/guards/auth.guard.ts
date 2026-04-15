@@ -16,8 +16,16 @@ export class AuthGuard implements CanActivate {
     const token = request.cookies?.['accessToken'] as string;
 
     try {
-      const payload = (await this.jwtService.verifyAsync(token)) as unknown;
-      request['user'] = payload;
+      const payload = (await this.jwtService.verifyAsync(token)) as unknown as {
+        id: string;
+        role: string;
+      };
+
+      request['user'] = {
+        id: payload.id,
+        role: payload.role,
+        ...request['user'],
+      };
     } catch {
       throw new UnauthorizedException('Invalid or expired access token.');
     }
