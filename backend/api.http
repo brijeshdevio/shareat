@@ -37,3 +37,21 @@ GET {{BASE_URL}}/users/profile
 
 ### DELETE - /users/account
 DELETE {{BASE_URL}}/users/account
+
+
+### GET - /donor/profile
+GET {{BASE_URL}}/donor/profile
+
+
+### PATCH - /donor/profile
+PATCH {{BASE_URL}}/donor/profile
+Content-Type: application/json
+
+{
+  "city": "London",
+  "address": "221B Baker Street",
+  "state": "Greater London",
+  "pincode": "110001",
+  "lat": 28.6139,
+  "lng": 77.2090
+}
