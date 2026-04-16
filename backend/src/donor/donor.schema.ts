@@ -68,6 +68,43 @@ export const CreateDonationSchema = z
   })
   .strict();
 
+// ========== Update Donation Schema ==========
+export const UpdateDonationSchema = z
+  .object({
+    title: z.string().trim().min(5, 'Title must be at least 5 characters'),
+    description: z.string().trim().optional(),
+    category: ItemCategory.optional(),
+    pickupAddress: z.string().trim().min(1),
+    pickupCity: z.string().trim().min(1),
+    pickupState: z.string().trim().optional(),
+    pickupPincode: z
+      .string()
+      .regex(/^[1-9][0-9]{5}$/, 'Invalid pincode')
+      .optional(),
+    pickupLat: z.number().min(-90).max(90).optional(),
+    pickupLng: z.number().min(-180).max(180).optional(),
+    photos: z.array(z.url()).optional(),
+    items: z.array(itemSchema).min(1, 'At least one item required'),
+  })
+  .refine(
+    (data) =>
+      data.title ||
+      data.description ||
+      data.category ||
+      data.pickupAddress ||
+      data.pickupCity ||
+      data.pickupState ||
+      data.pickupPincode ||
+      (data.pickupLat !== undefined && data.pickupLng !== undefined) ||
+      data.photos?.length ||
+      data.items?.length,
+    {
+      message: 'At least one field is required',
+    },
+  )
+  .strict();
+
 // ========== Types ==========
 export type DonorProfileDto = z.infer<typeof DonorProfileSchema>;
 export type CreateDonationDto = z.infer<typeof CreateDonationSchema>;
+export type UpdateDonationDto = z.infer<typeof UpdateDonationSchema>;

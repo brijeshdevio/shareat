@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -18,6 +21,8 @@ import {
   CreateDonationSchema,
   type DonorProfileDto,
   DonorProfileSchema,
+  type UpdateDonationDto,
+  UpdateDonationSchema,
 } from './donor.schema';
 
 @Controller('donor')
@@ -48,6 +53,7 @@ export class DonorController {
   }
 
   @Post('donations')
+  @HttpCode(HttpStatus.CREATED)
   async createDonation(
     @CurrentUser('id') donorId: string,
     @Body(new ZodValidationPipe(CreateDonationSchema))
@@ -76,6 +82,57 @@ export class DonorController {
     const donation = await this.donorService.getDonation(donorId, donationId);
     return sendSuccess({
       data: donation,
+    });
+  }
+
+  @Patch('donations/:donationId')
+  async updateDonation(
+    @CurrentUser('id') donorId: string,
+    @Param('donationId') donationId: string,
+    @Body(new ZodValidationPipe(UpdateDonationSchema))
+    body: UpdateDonationDto,
+  ) {
+    const donation = await this.donorService.updateDonation(
+      donorId,
+      donationId,
+      body,
+    );
+    return sendSuccess({
+      message: 'Donation updated successfully',
+      data: donation,
+    });
+  }
+
+  @Patch('donations/:donationId/publish')
+  async publishDonation(
+    @CurrentUser('id') donorId: string,
+    @Param('donationId') donationId: string,
+  ) {
+    await this.donorService.publishDonation(donorId, donationId);
+    return sendSuccess({
+      message: 'Donation published successfully',
+    });
+  }
+
+  @Patch('donations/:donationId/cancel')
+  async cancelDonation(
+    @CurrentUser('id') donorId: string,
+    @Param('donationId') donationId: string,
+  ) {
+    await this.donorService.cancelDonation(donorId, donationId);
+    return sendSuccess({
+      message: 'Donation cancelled successfully',
+    });
+  }
+
+  @Delete('donations/:donationId')
+  async deleteDonation(
+    @CurrentUser('id') donorId: string,
+    @Param('donationId') donationId: string,
+  ) {
+    await this.donorService.deleteDonation(donorId, donationId);
+    return sendSuccess({
+      message: 'Donation deleted successfully',
     });
   }
 }

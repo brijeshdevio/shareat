@@ -98,3 +98,15 @@ GET {{BASE_URL}}/donor/donations
 
 ### GET - /donor/donations/:donationID
 GET {{BASE_URL}}/donor/donations/51eb7798-526a-4e31-afbd-a073b69eea58
+
+
+### PATCH - /donor/donations/:donationID/publish
+PATCH {{BASE_URL}}/donor/donations/51eb7798-526a-4e31-afbd-a073b69eea58/publish
+
+
+### PATCH - /donor/donations/:donationID/cancel
+PATCH {{BASE_URL}}/donor/donations/51eb7798-526a-4e31-afbd-a073b69eea58/cancel
+
+
+### DELETE - /donor/donations/:donationID
+DELETE {{BASE_URL}}/donor/donations/51eb7798-526a-4e31-afbd-a073b69eea58

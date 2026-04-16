@@ -7,7 +7,11 @@ import {
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PRISMA_CODES } from '../constants';
-import { CreateDonationDto, DonorProfileDto } from './donor.schema';
+import {
+  CreateDonationDto,
+  DonorProfileDto,
+  UpdateDonationDto,
+} from './donor.schema';
 
 @Injectable()
 export class DonorService {
@@ -129,5 +133,100 @@ export class DonorService {
     }
 
     return donation;
+  }
+
+  async updateDonation(
+    donorId: string,
+    donationId: string,
+    data: UpdateDonationDto,
+  ) {
+    try {
+      const { updatedAt } = await this.prismaService.donation.update({
+        where: { id: donationId, donorId },
+        data: {
+          pickupAddress: data?.pickupAddress,
+          pickupCity: data?.pickupCity,
+          title: data?.title,
+          description: data?.description,
+          category: data?.category,
+          pickupState: data?.pickupState,
+          pickupPincode: data?.pickupPincode,
+          pickupLat: data?.pickupLat,
+          pickupLng: data?.pickupLng,
+          photos: data?.photos,
+        },
+        select: {
+          updatedAt: true,
+        },
+      });
+
+      return { ...data, updatedAt };
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PRISMA_CODES.NOT_FOUND
+      ) {
+        throw new UnauthorizedException();
+      }
+
+      throw new InternalServerErrorException();
+    }
+  }
+
+  async publishDonation(donorId: string, donationId: string) {
+    try {
+      await this.prismaService.donation.update({
+        where: { id: donationId, donorId },
+        data: {
+          status: 'PENDING',
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PRISMA_CODES.NOT_FOUND
+      ) {
+        throw new NotFoundException();
+      }
+
+      throw new InternalServerErrorException();
+    }
+  }
+
+  async cancelDonation(donorId: string, donationId: string) {
+    try {
+      await this.prismaService.donation.update({
+        where: { id: donationId, donorId },
+        data: {
+          status: 'CANCELLED',
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PRISMA_CODES.NOT_FOUND
+      ) {
+        throw new NotFoundException();
+      }
+
+      throw new InternalServerErrorException();
+    }
+  }
+
+  async deleteDonation(donorId: string, donationId: string) {
+    try {
+      await this.prismaService.donation.delete({
+        where: { id: donationId, donorId },
+      });
+    } catch (error) {
+      if (
+        error instanceof PrismaClientKnownRequestError &&
+        error.code === PRISMA_CODES.NOT_FOUND
+      ) {
+        throw new NotFoundException();
+      }
+
+      throw new InternalServerErrorException();
+    }
   }
 }
