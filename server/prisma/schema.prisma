@@ -1,0 +1,312 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────
+
+enum Role {
+  DONOR
+  NGO
+  ADMIN
+}
+
+enum ItemCategory {
+  CLOTHES
+  BLANKETS
+  HOUSEHOLD
+  BOOKS
+  FOOTWEAR
+  TOYS
+  OTHER
+}
+
+enum ItemCondition {
+  NEW
+  GOOD
+  FAIR
+}
+
+enum DonationStatus {
+  DRAFT
+  PENDING
+  SCHEDULED
+  COLLECTED
+  COMPLETED
+  CANCELLED
+}
+
+enum CollectionStatus {
+  REQUESTED
+  ACCEPTED
+  COLLECTED
+  COMPLETED
+  CANCELLED
+  DECLINED
+}
+
+enum NGOVerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum DisputeStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  CLOSED
+}
+
+enum NotificationType {
+  DONATION_LISTED
+  REQUEST_RECEIVED
+  REQUEST_ACCEPTED
+  REQUEST_DECLINED
+  COLLECTION_SCHEDULED
+  COLLECTION_COMPLETED
+  NGO_VERIFIED
+  NGO_REJECTED
+  DISPUTE_RAISED
+  DISPUTE_RESOLVED
+}
+
+enum TimeSlot {
+  MORNING // 9 AM – 12 PM
+  AFTERNOON // 12 PM – 4 PM
+  EVENING // 4 PM – 7 PM
+}
+
+// ─────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  phone        String?
+  passwordHash String
+  role         Role     @default(DONOR)
+  avatarUrl    String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  donorProfile       DonorProfile?
+  ngoProfile         NGOProfile?
+  donations          Donation[] // if role = DONOR
+  collectionRequests CollectionRequest[] // if role = NGO
+  notifications      Notification[]
+  disputesRaised     Dispute[]           @relation("DisputeRaisedBy")
+  verificationsBy    NGOProfile[]        @relation("VerifiedBy")
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────
+// DONOR PROFILE
+// ─────────────────────────────────────────
+
+model DonorProfile {
+  id      String  @id @default(uuid())
+  userId  String  @unique
+  address String?
+  city    String?
+  state   String?
+  pincode String?
+  lat     Float?
+  lng     Float?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("donor_profiles")
+}
+
+// ─────────────────────────────────────────
+// NGO PROFILE
+// ─────────────────────────────────────────
+
+model NGOProfile {
+  id                 String                @id @default(uuid())
+  userId             String                @unique
+  orgName            String
+  registrationNumber String                @unique
+  panNumber          String?
+  address            String
+  city               String
+  state              String
+  pincode            String
+  lat                Float?
+  lng                Float?
+  description        String?
+  website            String?
+  verificationStatus NGOVerificationStatus @default(PENDING)
+  verifiedById       String?
+  verifiedAt         DateTime?
+  rejectionReason    String?
+  rating             Float?                @default(0)
+  totalCollections   Int                   @default(0)
+
+  // Accepted item categories (stored as array)
+  acceptedCategories ItemCategory[]
+
+  // Operating info
+  contactPerson String?
+  contactPhone  String?
+
+  // Documents
+  documents NGODocument[]
+
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verifiedBy  User?               @relation("VerifiedBy", fields: [verifiedById], references: [id])
+  collections CollectionRequest[]
+
+  @@map("ngo_profiles")
+}
+
+// ─────────────────────────────────────────
+// NGO DOCUMENTS
+// ─────────────────────────────────────────
+
+model NGODocument {
+  id           String   @id @default(uuid())
+  ngoProfileId String
+  name         String // "Registration Certificate", "PAN Card" etc.
+  fileUrl      String
+  uploadedAt   DateTime @default(now())
+
+  ngoProfile NGOProfile @relation(fields: [ngoProfileId], references: [id], onDelete: Cascade)
+
+  @@map("ngo_documents")
+}
+
+// ─────────────────────────────────────────
+// DONATION
+// ─────────────────────────────────────────
+
+model Donation {
+  id            String         @id @default(uuid())
+  donorId       String
+  title         String
+  description   String?
+  category      ItemCategory
+  status        DonationStatus @default(DRAFT)
+  pickupAddress String
+  pickupCity    String
+  pickupState   String?
+  pickupPincode String?
+  pickupLat     Float?
+  pickupLng     Float?
+  photos        String[] // array of URLs
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  // Relations
+  donor              User                @relation(fields: [donorId], references: [id])
+  items              DonationItem[]
+  collectionRequests CollectionRequest[]
+
+  @@map("donations")
+}
+
+// ─────────────────────────────────────────
+// DONATION ITEM
+// ─────────────────────────────────────────
+
+model DonationItem {
+  id         String        @id @default(uuid())
+  donationId String
+  name       String
+  category   ItemCategory
+  quantity   Int
+  condition  ItemCondition
+
+  donation Donation @relation(fields: [donationId], references: [id], onDelete: Cascade)
+
+  @@map("donation_items")
+}
+
+// ─────────────────────────────────────────
+// COLLECTION REQUEST
+// ─────────────────────────────────────────
+
+model CollectionRequest {
+  id           String           @id @default(uuid())
+  donationId   String
+  ngoId        String
+  ngoProfileId String
+  status       CollectionStatus @default(REQUESTED)
+
+  // Scheduling
+  scheduledDate DateTime?
+  timeSlot      TimeSlot?
+  confirmedAt   DateTime?
+  collectedAt   DateTime?
+  completedAt   DateTime?
+
+  // Logistics
+  volunteerName  String?
+  volunteerPhone String?
+  notes          String?
+  declineReason  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  donation   Donation   @relation(fields: [donationId], references: [id])
+  ngo        User       @relation(fields: [ngoId], references: [id])
+  ngoProfile NGOProfile @relation(fields: [ngoProfileId], references: [id])
+
+  @@map("collection_requests")
+}
+
+// ─────────────────────────────────────────
+// NOTIFICATION
+// ─────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  metadata  Json? // { donationId, requestId, etc. }
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// ─────────────────────────────────────────
+// DISPUTE
+// ─────────────────────────────────────────
+
+model Dispute {
+  id           String        @id @default(uuid())
+  raisedById   String
+  donationId   String
+  subject      String
+  description  String
+  status       DisputeStatus @default(OPEN)
+  resolution   String?
+  resolvedAt   DateTime?
+  resolvedById String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  raisedBy User @relation("DisputeRaisedBy", fields: [raisedById], references: [id])
+
+  @@map("disputes")
+}
