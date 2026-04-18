@@ -101,6 +101,7 @@ model User {
   updatedAt    DateTime @updatedAt
 
   // Relations
+  refreshTokens      RefreshToken[]
   donorProfile       DonorProfile?
   ngoProfile         NGOProfile?
   donations          Donation[] // if role = DONOR
@@ -110,6 +111,25 @@ model User {
   verificationsBy    NGOProfile[]        @relation("VerifiedBy")
 
   @@map("users")
+}
+
+// ─────────────────────────────────────────
+// REFRESH TOKEN
+// ─────────────────────────────────────────
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
 }
 
 // ─────────────────────────────────────────
