@@ -3,10 +3,12 @@ import {
   Controller,
   HttpCode,
   Post,
+  Req,
   Res,
+  UnauthorizedException,
   UsePipes,
 } from '@nestjs/common';
-import { type Response } from 'express';
+import { type Request, type Response } from 'express';
 import { ZodValidationPipe } from 'src/common/pipes/zod-validate.pipe';
 import { ACCESS_COOKIE, REFRESH_COOKIE } from 'src/constants';
 import { setCookie } from 'src/utils/cookie';
@@ -49,5 +51,28 @@ export class AuthController {
     return sendSuccess({
       message: 'User logged in successfully',
     });
+  }
+
+  @Post('refresh')
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const rawToken = req.cookies?.[REFRESH_COOKIE] as string;
+    if (!rawToken) throw new UnauthorizedException('No refresh token');
+
+    const { accessToken, refreshToken, expiresAt } =
+      await this.authService.refresh(rawToken);
+
+    const remainingMs = expiresAt.getTime() - Date.now();
+
+    setCookie(res, ACCESS_COOKIE, accessToken, {
+      maxAge: 15 * 60 * 1000,
+    });
+    setCookie(res, REFRESH_COOKIE, refreshToken, {
+      maxAge: remainingMs,
+    });
+
+    return sendSuccess({ message: 'Rotated refresh token' });
   }
 }

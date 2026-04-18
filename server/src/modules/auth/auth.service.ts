@@ -106,4 +106,34 @@ export class AuthService {
 
     return await this.generateTokens(user?.id, user?.role);
   }
+
+  async refresh(rawRefreshToken: string) {
+    const hashed = this.hashToken(rawRefreshToken);
+
+    const stored = await this.prisma.refreshToken.findUnique({
+      where: { token: hashed },
+      include: { user: true },
+    });
+
+    if (!stored) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    if (!stored || stored.expiresAt < new Date()) {
+      if (stored) {
+        await this.prisma.refreshToken.deleteMany({
+          where: { userId: stored.userId },
+        });
+      }
+      throw new UnauthorizedException('Refresh token expired');
+    }
+
+    await this.prisma.refreshToken.delete({ where: { id: stored.id } });
+
+    return await this.generateTokens(
+      stored.user.id,
+      stored.user.role,
+      stored.expiresAt,
+    );
+  }
 }
