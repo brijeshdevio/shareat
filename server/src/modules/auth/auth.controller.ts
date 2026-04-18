@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UsePipes } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post, UsePipes } from '@nestjs/common';
 import { ZodValidationPipe } from 'src/common/pipes/zod-validate.pipe';
 import { sendSuccess } from 'src/utils/response';
 
@@ -12,7 +12,8 @@ export class AuthController {
 
   @Post('register')
   @UsePipes(new ZodValidationPipe(RegisterSchema))
-  async login(@Body() body: RegisterDto) {
+  @HttpCode(201)
+  async register(@Body() body: RegisterDto) {
     const user = await this.authService.register(body);
     return sendSuccess({
       statusCode: 201,
