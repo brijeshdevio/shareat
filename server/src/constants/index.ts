@@ -5,3 +5,6 @@ export const PRISMA_CODES = {
   CONFLICT: 'P2002',
   NOT_FOUND: 'P2025',
 };
+
+export const REFRESH_COOKIE = 'refresh_token';
+export const ACCESS_COOKIE = 'access_token';

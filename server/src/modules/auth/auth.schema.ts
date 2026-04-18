@@ -11,3 +11,13 @@ export const RegisterSchema = z
     role: z.enum(['DONOR', 'NGO']).default('DONOR'),
   })
   .strict();
+
+export const LoginSchema = z
+  .object({
+    email: z.email('Invalid email address'),
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .max(30, 'Password must be at most 30 characters'),
+  })
+  .strict();
