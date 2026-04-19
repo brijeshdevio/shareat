@@ -55,7 +55,7 @@ export class AuthService {
         expiresAt,
       },
     });
-
+    console.log(accessToken, hashedRefresh, expiresAt);
     return { accessToken, refreshToken: rawRefresh, expiresAt };
   }
 
@@ -135,5 +135,12 @@ export class AuthService {
       stored.user.role,
       stored.expiresAt,
     );
+  }
+
+  async logout(rawRefreshToken: string): Promise<void> {
+    const hashed = this.hashToken(rawRefreshToken);
+    await this.prisma.refreshToken.deleteMany({
+      where: { token: hashed },
+    });
   }
 }

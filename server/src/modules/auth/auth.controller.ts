@@ -11,7 +11,7 @@ import {
 import { type Request, type Response } from 'express';
 import { ZodValidationPipe } from 'src/common/pipes/zod-validate.pipe';
 import { ACCESS_COOKIE, REFRESH_COOKIE } from 'src/constants';
-import { setCookie } from 'src/utils/cookie';
+import { clearCookie, setCookie } from 'src/utils/cookie';
 import { sendSuccess } from 'src/utils/response';
 
 import { LoginSchema, RegisterSchema } from './auth.schema';
@@ -74,5 +74,17 @@ export class AuthController {
     });
 
     return sendSuccess({ message: 'Rotated refresh token' });
+  }
+
+  @Post('logout')
+  @HttpCode(204)
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const rawToken = req.cookies?.[REFRESH_COOKIE] as string;
+    if (!rawToken) throw new UnauthorizedException('No refresh token');
+
+    await this.authService.logout(rawToken);
+
+    clearCookie(res, REFRESH_COOKIE);
+    clearCookie(res, ACCESS_COOKIE);
   }
 }
