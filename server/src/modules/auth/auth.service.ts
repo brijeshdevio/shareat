@@ -55,7 +55,7 @@ export class AuthService {
         expiresAt,
       },
     });
-    console.log(accessToken, hashedRefresh, expiresAt);
+
     return { accessToken, refreshToken: rawRefresh, expiresAt };
   }
 
