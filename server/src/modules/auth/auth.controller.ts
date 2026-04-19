@@ -1,14 +1,18 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   Post,
   Req,
   Res,
   UnauthorizedException,
+  UseGuards,
   UsePipes,
 } from '@nestjs/common';
 import { type Request, type Response } from 'express';
+import { CurrentUser } from 'src/common/decorators/user.decorator';
+import { AuthGuard } from 'src/common/guards/auth.guard';
 import { ZodValidationPipe } from 'src/common/pipes/zod-validate.pipe';
 import { ACCESS_COOKIE, REFRESH_COOKIE } from 'src/constants';
 import { clearCookie, setCookie } from 'src/utils/cookie';
@@ -86,5 +90,12 @@ export class AuthController {
 
     clearCookie(res, REFRESH_COOKIE);
     clearCookie(res, ACCESS_COOKIE);
+  }
+
+  @Get('me')
+  @UseGuards(AuthGuard)
+  async getMe(@CurrentUser('id') userId: string) {
+    const user = await this.authService.getMe(userId);
+    return sendSuccess({ data: user });
   }
 }

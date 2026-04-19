@@ -143,4 +143,20 @@ export class AuthService {
       where: { token: hashed },
     });
   }
+
+  async getMe(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        updatedAt: true,
+      },
+    });
+    if (!user) throw new UnauthorizedException();
+
+    return user;
+  }
 }
