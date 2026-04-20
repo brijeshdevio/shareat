@@ -6,7 +6,6 @@ import {
 
 export type CurrentUserType = {
   id: string;
-  email: string;
 };
 
 type CurrentUserKey = keyof CurrentUserType;
