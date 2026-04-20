@@ -116,4 +116,20 @@ export class DonorController {
       data: donation,
     });
   }
+
+  @Patch('donations/:donationId/publish')
+  async publishDonation(
+    @CurrentUser('id') donorId: string,
+    @Param('donationId') donationId: string,
+  ) {
+    const donation = await this.donorService.publishDonation(
+      donorId,
+      donationId,
+    );
+
+    return sendSuccess({
+      message: 'Donation published successfully',
+      data: donation,
+    });
+  }
 }

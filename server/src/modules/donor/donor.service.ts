@@ -185,4 +185,48 @@ export class DonorService {
       return updatedDonation;
     });
   }
+
+  async publishDonation(donorId: string, donationId: string) {
+    const donation = await this.prisma.donation.findFirst({
+      where: { id: donationId, donorId },
+      include: { items: true },
+    });
+
+    if (!donation) {
+      throw new NotFoundException('Donation not found');
+    }
+
+    // strict state machine
+    if (donation.status !== 'DRAFT') {
+      throw new BadRequestException('Only DRAFT donations can be published');
+    }
+
+    // completeness validation
+    if (
+      !donation.title ||
+      !donation.description ||
+      !donation.category ||
+      !donation.pickupAddress ||
+      !donation.pickupCity ||
+      !donation.pickupPincode
+    ) {
+      throw new BadRequestException(
+        'Donation is incomplete. Fill all required fields before publishing',
+      );
+    }
+
+    if (!donation.items || donation.items.length === 0) {
+      throw new BadRequestException(
+        'At least one item is required before publishing',
+      );
+    }
+
+    return this.prisma.donation.update({
+      where: { id: donationId },
+      data: {
+        status: 'PENDING',
+      },
+      select: { id: true, status: true },
+    });
+  }
 }
