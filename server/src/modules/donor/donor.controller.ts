@@ -19,12 +19,14 @@ import {
   CreateDonationSchema,
   DonorUpdateProfileSchema,
   GetDonationsQuerySchema,
+  UpdateDonationSchema,
 } from './donor.schema';
 import { DonorService } from './donor.service';
 import {
   type CreateDonationDto,
   type DonorUpdateProfileDto,
   type GetDonationsQueryDto,
+  type UpdateDonationDto,
 } from './donor.types';
 
 @Controller('donor')
@@ -94,5 +96,24 @@ export class DonorController {
       donationId,
     );
     return sendSuccess({ data: donation });
+  }
+
+  @Patch('donations/:donationId')
+  async updateDonation(
+    @CurrentUser('id') donorId: string,
+    @Param('donationId') donationId: string,
+    @Body(new ZodValidationPipe(UpdateDonationSchema))
+    body: UpdateDonationDto,
+  ) {
+    const donation = await this.donorService.updateDonation(
+      donorId,
+      donationId,
+      body,
+    );
+
+    return sendSuccess({
+      message: 'Donation updated successfully',
+      data: donation,
+    });
   }
 }

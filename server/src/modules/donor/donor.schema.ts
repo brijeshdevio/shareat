@@ -86,3 +86,33 @@ export const GetDonationsQuerySchema = z
     order: z.enum(['asc', 'desc']).default('desc'),
   })
   .strict();
+
+export const UpdateDonationSchema = z
+  .object({
+    title: z.string().min(3).max(255).optional(),
+    description: z.string().min(10).optional(),
+    category: ItemCategory.optional(),
+    pickupAddress: z.string().min(5).optional(),
+    pickupCity: z.string().min(2).optional(),
+    pickupPincode: z
+      .string()
+      .regex(/^\d{6}$/)
+      .optional(),
+    photos: z.array(z.url()).max(10).optional(),
+    items: z
+      .array(
+        z.object({
+          name: z.string().min(2),
+          category: ItemCategory,
+          quantity: z.number().int().min(1),
+          condition: ItemCondition,
+        }),
+      )
+      .min(1)
+      .optional(),
+  })
+  .strict()
+  .refine(
+    (data) => Object.keys(data).length > 0,
+    'At least one field must be provided',
+  );

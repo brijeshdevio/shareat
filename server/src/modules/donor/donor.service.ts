@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -12,6 +13,7 @@ import {
   CreateDonationDto,
   DonorUpdateProfileDto,
   GetDonationsQueryDto,
+  UpdateDonationDto,
 } from './donor.types';
 
 @Injectable()
@@ -123,5 +125,64 @@ export class DonorService {
     });
     if (!donation) throw new NotFoundException();
     return donation;
+  }
+
+  async updateDonation(
+    donorId: string,
+    donationId: string,
+    payload: UpdateDonationDto,
+  ) {
+    const donation = await this.prisma.donation.findFirst({
+      where: { id: donationId, donorId },
+      include: { items: true },
+    });
+
+    if (!donation) {
+      throw new NotFoundException('Donation not found');
+    }
+
+    if (!['DRAFT', 'PENDING'].includes(donation.status)) {
+      throw new BadRequestException(
+        'Only DRAFT or PENDING donations can be updated',
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const updatedDonation = await tx.donation.update({
+        where: { id: donationId },
+        data: {
+          ...(payload.title && { title: payload.title }),
+          ...(payload.description && { description: payload.description }),
+          ...(payload.category && { category: payload.category }),
+          ...(payload.pickupAddress && {
+            pickupAddress: payload.pickupAddress,
+          }),
+          ...(payload.pickupCity && { pickupCity: payload.pickupCity }),
+          ...(payload.pickupPincode && {
+            pickupPincode: payload.pickupPincode,
+          }),
+          ...(payload.photos && { photos: payload.photos }),
+        },
+      });
+
+      // 2. Items handling (replace strategy)
+      if (payload.items) {
+        await tx.donationItem.deleteMany({
+          where: { donationId },
+        });
+
+        await tx.donationItem.createMany({
+          data: payload.items.map((item) => ({
+            donationId,
+            name: item.name,
+            category: item.category,
+            quantity: item.quantity,
+            condition: item.condition,
+          })),
+        });
+      }
+
+      return updatedDonation;
+    });
   }
 }
