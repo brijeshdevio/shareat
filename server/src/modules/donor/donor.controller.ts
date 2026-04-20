@@ -3,8 +3,10 @@ import {
   Controller,
   Get,
   HttpCode,
+  Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser } from 'src/common/decorators/user.decorator';
@@ -13,11 +15,16 @@ import { RoleGuard } from 'src/common/guards/role.guard';
 import { ZodValidationPipe } from 'src/common/pipes/zod-validate.pipe';
 import { sendSuccess } from 'src/utils/response';
 
-import { CreateDonationSchema, DonorUpdateProfileSchema } from './donor.schema';
+import {
+  CreateDonationSchema,
+  DonorUpdateProfileSchema,
+  GetDonationsQuerySchema,
+} from './donor.schema';
 import { DonorService } from './donor.service';
 import {
   type CreateDonationDto,
   type DonorUpdateProfileDto,
+  type GetDonationsQueryDto,
 } from './donor.types';
 
 @Controller('donor')
@@ -58,5 +65,34 @@ export class DonorController {
       message: 'Donation created successfully',
       data: donation,
     });
+  }
+
+  @Get('donations')
+  async getDonations(
+    @CurrentUser('id') donorId: string,
+    @Query(new ZodValidationPipe(GetDonationsQuerySchema))
+    queries: GetDonationsQueryDto,
+  ) {
+    const { donations, meta } = await this.donorService.getDonations(
+      donorId,
+      queries,
+    );
+
+    return sendSuccess({
+      data: donations,
+      meta,
+    });
+  }
+
+  @Get('donations/:donationId')
+  async getDonationById(
+    @CurrentUser('id') donorId: string,
+    @Param('donationId') donationId: string,
+  ) {
+    const donation = await this.donorService.getDonationById(
+      donorId,
+      donationId,
+    );
+    return sendSuccess({ data: donation });
   }
 }

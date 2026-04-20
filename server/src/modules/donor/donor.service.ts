@@ -8,7 +8,11 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
 import { PRISMA_CODES } from 'src/constants';
 import { PrismaService } from 'src/prisma/prisma.service';
 
-import { CreateDonationDto, DonorUpdateProfileDto } from './donor.types';
+import {
+  CreateDonationDto,
+  DonorUpdateProfileDto,
+  GetDonationsQueryDto,
+} from './donor.types';
 
 @Injectable()
 export class DonorService {
@@ -78,5 +82,46 @@ export class DonorService {
 
       throw new InternalServerErrorException();
     }
+  }
+
+  async getDonations(donorId: string, queries: GetDonationsQueryDto) {
+    const where: Record<string, unknown> = { donorId };
+    if (queries.status) {
+      where.status = queries.status;
+    }
+    if (queries.category) {
+      where.category = queries.category;
+    }
+
+    const skip = queries.page ? (queries.page - 1) * queries.limit : 0;
+    const take = queries.limit ? queries.limit : 10;
+    const donations = await this.prisma.donation.findMany({
+      where,
+      skip,
+      take,
+      orderBy: {
+        [queries.sortBy]: queries.order,
+      },
+    });
+    const total = await this.prisma.donation.count({ where, skip, take });
+    const totalPages = Math.ceil(total / queries.limit);
+
+    return {
+      donations,
+      meta: {
+        total,
+        totalPages,
+        page: queries.page,
+        limit: queries.limit,
+      },
+    };
+  }
+
+  async getDonationById(donorId: string, donationId: string) {
+    const donation = await this.prisma.donation.findUnique({
+      where: { donorId, id: donationId },
+    });
+    if (!donation) throw new NotFoundException();
+    return donation;
   }
 }

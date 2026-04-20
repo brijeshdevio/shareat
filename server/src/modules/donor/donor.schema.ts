@@ -66,3 +66,23 @@ export const CreateDonationSchema = z
     items: z.array(itemSchema).min(1, 'At least one item required'),
   })
   .strict();
+
+export const DonationStatusEnum = z.enum([
+  'DRAFT',
+  'PENDING',
+  'SCHEDULED',
+  'COLLECTED',
+  'COMPLETED',
+  'CANCELLED',
+]);
+
+export const GetDonationsQuerySchema = z
+  .object({
+    status: DonationStatusEnum.optional(),
+    category: ItemCategory.optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(10),
+    sortBy: z.enum(['createdAt', 'updatedAt']).default('createdAt'),
+    order: z.enum(['asc', 'desc']).default('desc'),
+  })
+  .strict();
