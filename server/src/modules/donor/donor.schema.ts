@@ -1,3 +1,4 @@
+import { TimeSlot } from 'src/generated/prisma/enums';
 import z from 'zod';
 
 export const DonorUpdateProfileSchema = z
@@ -116,3 +117,12 @@ export const UpdateDonationSchema = z
     (data) => Object.keys(data).length > 0,
     'At least one field must be provided',
   );
+
+export const CreateCollectionRequestSchema = z
+  .object({
+    ngoProfileId: z.uuid(),
+    scheduledDate: z.coerce.date(),
+    timeSlot: z.nativeEnum(TimeSlot),
+    notes: z.string().max(500).optional(),
+  })
+  .strict();

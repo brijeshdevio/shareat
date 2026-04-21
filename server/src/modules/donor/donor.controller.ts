@@ -16,6 +16,7 @@ import { ZodValidationPipe } from 'src/common/pipes/zod-validate.pipe';
 import { sendSuccess } from 'src/utils/response';
 
 import {
+  CreateCollectionRequestSchema,
   CreateDonationSchema,
   DonorUpdateProfileSchema,
   GetDonationsQuerySchema,
@@ -23,6 +24,7 @@ import {
 } from './donor.schema';
 import { DonorService } from './donor.service';
 import {
+  type CreateCollectionRequestDto,
   type CreateDonationDto,
   type DonorUpdateProfileDto,
   type GetDonationsQueryDto,
@@ -145,6 +147,25 @@ export class DonorController {
     return sendSuccess({
       message: 'Donation cancelled successfully',
       data: donation,
+    });
+  }
+
+  @Post('donations/:donationId/requests')
+  async createCollectionRequest(
+    @CurrentUser('id') donorId: string,
+    @Param('donationId') donationId: string,
+    @Body(new ZodValidationPipe(CreateCollectionRequestSchema))
+    body: CreateCollectionRequestDto,
+  ) {
+    const request = await this.donorService.createCollectionRequest(
+      donorId,
+      donationId,
+      body,
+    );
+
+    return sendSuccess({
+      message: 'Collection request created successfully',
+      data: request,
     });
   }
 }

@@ -10,6 +10,7 @@ import { PRISMA_CODES } from 'src/constants';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 import {
+  CreateCollectionRequestDto,
   CreateDonationDto,
   DonorUpdateProfileDto,
   GetDonationsQueryDto,
@@ -271,6 +272,86 @@ export class DonorService {
       });
 
       return updatedDonation;
+    });
+  }
+
+  async createCollectionRequest(
+    donorId: string,
+    donationId: string,
+    payload: CreateCollectionRequestDto,
+  ) {
+    const donation = await this.prisma.donation.findFirst({
+      where: { id: donationId, donorId },
+    });
+
+    if (!donation) {
+      throw new NotFoundException('Donation not found');
+    }
+
+    if (donation.status !== 'PENDING') {
+      throw new BadRequestException(
+        'Collection request can only be created for PENDING donations',
+      );
+    }
+
+    const existingRequest = await this.prisma.collectionRequest.findFirst({
+      where: {
+        donationId,
+        status: {
+          in: ['REQUESTED', 'ACCEPTED'],
+        },
+      },
+    });
+
+    if (existingRequest) {
+      throw new BadRequestException(
+        'An active collection request already exists for this donation',
+      );
+    }
+
+    // validate NGO
+    const ngo = await this.prisma.nGOProfile.findUnique({
+      where: { id: payload.ngoProfileId },
+    });
+
+    if (!ngo) {
+      throw new NotFoundException('NGO not found');
+    }
+
+    if (ngo.verificationStatus !== 'APPROVED') {
+      throw new BadRequestException('NGO is not verified');
+    }
+
+    if (!ngo.acceptedCategories.includes(donation.category)) {
+      throw new BadRequestException('NGO does not accept this category');
+    }
+
+    // date validation (no past scheduling)
+    if (payload.scheduledDate < new Date()) {
+      throw new BadRequestException('Scheduled date cannot be in the past');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const request = await tx.collectionRequest.create({
+        data: {
+          donationId,
+          ngoId: ngo.userId,
+          ngoProfileId: ngo.id,
+          scheduledDate: payload.scheduledDate,
+          timeSlot: payload.timeSlot,
+          notes: payload.notes,
+        },
+      });
+
+      // optional: update donation → SCHEDULED
+      await tx.donation.update({
+        where: { id: donationId },
+        data: {
+          status: 'SCHEDULED',
+        },
+      });
+
+      return request;
     });
   }
 }
