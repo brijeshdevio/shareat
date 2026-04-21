@@ -20,6 +20,7 @@ import {
   CreateDonationSchema,
   DonorUpdateProfileSchema,
   GetDonationsQuerySchema,
+  GetNGOsQuerySchema,
   UpdateDonationSchema,
 } from './donor.schema';
 import { DonorService } from './donor.service';
@@ -28,6 +29,7 @@ import {
   type CreateDonationDto,
   type DonorUpdateProfileDto,
   type GetDonationsQueryDto,
+  type GetNGOsQueryDto,
   type UpdateDonationDto,
 } from './donor.types';
 
@@ -218,5 +220,15 @@ export class DonorController {
       message: 'Collection request cancelled successfully',
       data: request,
     });
+  }
+
+  @Get('ngos')
+  async browseNGOs(
+    @Query(new ZodValidationPipe(GetNGOsQuerySchema))
+    query: GetNGOsQueryDto,
+  ) {
+    const ngos = await this.donorService.browseNGOs(query);
+
+    return sendSuccess({ data: ngos });
   }
 }

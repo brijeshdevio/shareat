@@ -14,6 +14,7 @@ import {
   CreateDonationDto,
   DonorUpdateProfileDto,
   GetDonationsQueryDto,
+  GetNGOsQueryDto,
   UpdateDonationDto,
 } from './donor.types';
 
@@ -503,6 +504,68 @@ export class DonorService {
       }
 
       return cancelledRequest;
+    });
+  }
+
+  async browseNGOs(queries: GetNGOsQueryDto) {
+    const where: Record<string, unknown> = {
+      verificationStatus: 'APPROVED',
+    };
+
+    if (queries.city) {
+      where.city = queries.city;
+    }
+
+    if (queries.category) {
+      where.acceptedCategories = {
+        has: queries.category,
+      };
+    }
+
+    if (queries.search) {
+      where.orgName = {
+        contains: queries.search,
+        mode: 'insensitive',
+      };
+    }
+
+    // GEO FILTER (raw SQL needed for proper distance calc)
+    if (queries.lat && queries.lng) {
+      return await this.prisma.$queryRawUnsafe(`
+      SELECT *,
+      (
+        6371 * acos(
+          cos(radians(${queries.lat})) *
+          cos(radians("lat")) *
+          cos(radians("lng") - radians(${queries.lng})) +
+          sin(radians(${queries.lat})) *
+          sin(radians("lat"))
+        )
+      ) AS distance
+      FROM ngo_profiles
+      WHERE "verificationStatus" = 'APPROVED'
+      ${queries.category ? `AND '${queries.category}' = ANY("acceptedCategories")` : ''}
+      ${queries.city ? `AND "city" = '${queries.city}'` : ''}
+      ${queries.search ? `AND "orgName" ILIKE '%${queries.search}%'` : ''}
+      HAVING distance < ${queries.radius}
+      ORDER BY distance ASC
+      LIMIT ${queries.limit}
+      OFFSET ${(queries.page - 1) * queries.limit};
+    `);
+    }
+    return await this.prisma.nGOProfile.findMany({
+      where,
+      skip: (queries.page - 1) * queries.limit,
+      take: queries.limit,
+      orderBy: { rating: 'desc' },
+      select: {
+        id: true,
+        orgName: true,
+        city: true,
+        state: true,
+        rating: true,
+        acceptedCategories: true,
+      },
     });
   }
 }

@@ -126,3 +126,33 @@ export const CreateCollectionRequestSchema = z
     notes: z.string().max(500).optional(),
   })
   .strict();
+
+export const GetNGOsQuerySchema = z
+  .object({
+    city: z.string().trim().min(1).max(100).optional(),
+    category: ItemCategory.optional(),
+    search: z.string().trim().min(1).max(100).optional(),
+    lat: z.coerce.number().min(-90).max(90).optional(),
+    lng: z.coerce.number().min(-180).max(180).optional(),
+    radius: z.coerce.number().positive().max(100).default(20), // km cap
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(50).default(10),
+  })
+  .strict()
+  .superRefine((data, ctx) => {
+    if ((data.lat && !data.lng) || (!data.lat && data.lng)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'lat and lng must be provided together',
+        path: ['lat'],
+      });
+    }
+
+    if (data.city && data.lat) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Use either city or lat/lng, not both',
+        path: ['city'],
+      });
+    }
+  });

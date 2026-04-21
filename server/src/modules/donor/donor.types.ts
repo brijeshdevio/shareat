@@ -5,6 +5,7 @@ import {
   CreateDonationSchema,
   DonorUpdateProfileSchema,
   GetDonationsQuerySchema,
+  GetNGOsQuerySchema,
   UpdateDonationSchema,
 } from './donor.schema';
 
@@ -15,3 +16,4 @@ export type UpdateDonationDto = z.infer<typeof UpdateDonationSchema>;
 export type CreateCollectionRequestDto = z.infer<
   typeof CreateCollectionRequestSchema
 >;
+export type GetNGOsQueryDto = z.infer<typeof GetNGOsQuerySchema>;
