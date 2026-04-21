@@ -168,4 +168,55 @@ export class DonorController {
       data: request,
     });
   }
+
+  @Get('donations/:donationId/requests')
+  async getRequests(
+    @CurrentUser('id') donorId: string,
+    @Param('donationId') donationId: string,
+  ) {
+    const requests = await this.donorService.getCollectionRequests(
+      donorId,
+      donationId,
+    );
+
+    return sendSuccess({
+      data: requests,
+    });
+  }
+
+  @Patch('donations/:donationId/requests/:requestId/accept')
+  async acceptRequest(
+    @CurrentUser('id') donorId: string,
+    @Param('donationId') donationId: string,
+    @Param('requestId') requestId: string,
+  ) {
+    const request = await this.donorService.acceptCollectionRequest(
+      donorId,
+      donationId,
+      requestId,
+    );
+
+    return sendSuccess({
+      message: 'Collection request accepted successfully',
+      data: request,
+    });
+  }
+
+  @Patch('donations/:donationId/requests/:requestId/cancel')
+  async cancelRequest(
+    @CurrentUser('id') donorId: string,
+    @Param('donationId') donationId: string,
+    @Param('requestId') requestId: string,
+  ) {
+    const request = await this.donorService.cancelCollectionRequest(
+      donorId,
+      donationId,
+      requestId,
+    );
+
+    return sendSuccess({
+      message: 'Collection request cancelled successfully',
+      data: request,
+    });
+  }
 }

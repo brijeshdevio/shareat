@@ -354,4 +354,155 @@ export class DonorService {
       return request;
     });
   }
+
+  async getCollectionRequests(donorId: string, donationId: string) {
+    const donation = await this.prisma.donation.findFirst({
+      where: { id: donationId, donorId },
+    });
+
+    if (!donation) {
+      throw new NotFoundException('Donation not found');
+    }
+
+    const requests = await this.prisma.collectionRequest.findMany({
+      where: { donationId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        ngoProfile: {
+          select: {
+            id: true,
+            orgName: true,
+            city: true,
+            state: true,
+            rating: true,
+          },
+        },
+      },
+    });
+
+    return requests;
+  }
+
+  async acceptCollectionRequest(
+    donorId: string,
+    donationId: string,
+    requestId: string,
+  ) {
+    const donation = await this.prisma.donation.findFirst({
+      where: { id: donationId, donorId },
+    });
+
+    if (!donation) {
+      throw new NotFoundException('Donation not found');
+    }
+
+    if (donation.status !== 'PENDING') {
+      throw new BadRequestException(
+        'Only PENDING donations can accept a request',
+      );
+    }
+
+    const request = await this.prisma.collectionRequest.findFirst({
+      where: {
+        id: requestId,
+        donationId,
+      },
+    });
+
+    if (!request) {
+      throw new NotFoundException('Collection request not found');
+    }
+
+    if (request.status !== 'REQUESTED') {
+      throw new BadRequestException('Only REQUESTED requests can be accepted');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Accept selected request
+      const acceptedRequest = await tx.collectionRequest.update({
+        where: { id: requestId },
+        data: {
+          status: 'ACCEPTED',
+          confirmedAt: new Date(),
+        },
+      });
+
+      // 2. Cancel all other active requests
+      await tx.collectionRequest.updateMany({
+        where: {
+          donationId,
+          id: { not: requestId },
+          status: {
+            in: ['REQUESTED', 'ACCEPTED'],
+          },
+        },
+        data: {
+          status: 'CANCELLED',
+        },
+      });
+
+      // 3. Update donation state
+      await tx.donation.update({
+        where: { id: donationId },
+        data: {
+          status: 'SCHEDULED',
+        },
+      });
+
+      return acceptedRequest;
+    });
+  }
+
+  async cancelCollectionRequest(
+    donorId: string,
+    donationId: string,
+    requestId: string,
+  ) {
+    const donation = await this.prisma.donation.findFirst({
+      where: { id: donationId, donorId },
+    });
+
+    if (!donation) {
+      throw new NotFoundException('Donation not found');
+    }
+
+    const request = await this.prisma.collectionRequest.findFirst({
+      where: {
+        id: requestId,
+        donationId,
+      },
+    });
+
+    if (!request) {
+      throw new NotFoundException('Collection request not found');
+    }
+
+    if (!['REQUESTED', 'ACCEPTED'].includes(request.status)) {
+      throw new BadRequestException(
+        'Only REQUESTED or ACCEPTED requests can be cancelled',
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Cancel the request
+      const cancelledRequest = await tx.collectionRequest.update({
+        where: { id: requestId },
+        data: {
+          status: 'CANCELLED',
+        },
+      });
+
+      // 2. If it was accepted → revert donation state
+      if (request.status === 'ACCEPTED') {
+        await tx.donation.update({
+          where: { id: donationId },
+          data: {
+            status: 'PENDING',
+          },
+        });
+      }
+
+      return cancelledRequest;
+    });
+  }
 }
