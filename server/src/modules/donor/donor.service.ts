@@ -229,4 +229,48 @@ export class DonorService {
       select: { id: true, status: true },
     });
   }
+
+  async cancelDonation(donorId: string, donationId: string) {
+    const donation = await this.prisma.donation.findFirst({
+      where: { id: donationId, donorId },
+      include: {
+        collectionRequests: true,
+      },
+    });
+
+    if (!donation) {
+      throw new NotFoundException('Donation not found');
+    }
+
+    if (!['PENDING', 'SCHEDULED'].includes(donation.status)) {
+      throw new BadRequestException(
+        'Only PENDING or SCHEDULED donations can be cancelled',
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Cancel donation
+      const updatedDonation = await tx.donation.update({
+        where: { id: donationId },
+        data: {
+          status: 'CANCELLED',
+        },
+      });
+
+      // 2. Cascade cancel collection requests
+      await tx.collectionRequest.updateMany({
+        where: {
+          donationId,
+          status: {
+            in: ['REQUESTED', 'ACCEPTED'],
+          },
+        },
+        data: {
+          status: 'CANCELLED',
+        },
+      });
+
+      return updatedDonation;
+    });
+  }
 }

@@ -132,4 +132,19 @@ export class DonorController {
       data: donation,
     });
   }
+
+  async cancelDonation(
+    @CurrentUser('id') donorId: string,
+    @Param('donationId') donationId: string,
+  ) {
+    const donation = await this.donorService.cancelDonation(
+      donorId,
+      donationId,
+    );
+
+    return sendSuccess({
+      message: 'Donation cancelled successfully',
+      data: donation,
+    });
+  }
 }
