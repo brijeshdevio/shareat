@@ -568,4 +568,31 @@ export class DonorService {
       },
     });
   }
+
+  async getNGOPublicProfile(ngoProfileId: string) {
+    const ngo = await this.prisma.nGOProfile.findFirst({
+      where: {
+        id: ngoProfileId,
+        verificationStatus: 'APPROVED',
+      },
+      select: {
+        id: true,
+        orgName: true,
+        city: true,
+        state: true,
+        description: true,
+        rating: true,
+        acceptedCategories: true,
+        totalCollections: true,
+        contactPerson: true,
+        contactPhone: true,
+      },
+    });
+
+    if (!ngo) {
+      throw new NotFoundException('NGO not found or not verified');
+    }
+
+    return ngo;
+  }
 }

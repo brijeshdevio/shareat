@@ -231,4 +231,13 @@ export class DonorController {
 
     return sendSuccess({ data: ngos });
   }
+
+  @Get('ngos/:ngoProfileId')
+  async getNGOProfile(@Param('ngoProfileId') ngoProfileId: string) {
+    const ngo = await this.donorService.getNGOPublicProfile(ngoProfileId);
+
+    return sendSuccess({
+      data: ngo,
+    });
+  }
 }
